@@ -20,6 +20,9 @@ dependencies:
   # Google Sign In
   google_sign_in: ^6.1.6
   
+  # Email/Password Auth
+  crypto: ^3.0.3
+  
   # UI & Navigation
   cupertino_icons: ^1.0.2
   flutter_svg: ^2.0.9

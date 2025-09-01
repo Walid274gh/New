@@ -14,13 +14,23 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _displayNameController = TextEditingController();
+  
   bool _isOtpSent = false;
+  bool _isEmailMode = false;
+  bool _isSignUp = false;
+  bool _isPasswordVisible = false;
   String? _verificationId;
 
   @override
   void dispose() {
     _phoneController.dispose();
     _otpController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _displayNameController.dispose();
     super.dispose();
   }
 
@@ -96,6 +106,107 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     }
   }
+  
+  Future<void> _signInWithEmail() async {
+    if (_formKey.currentState!.validate()) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final success = await authService.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connexion réussie'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authService.errorMessage ?? 'Erreur lors de la connexion'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _signUpWithEmail() async {
+    if (_formKey.currentState!.validate()) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final success = await authService.signUpWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+        _displayNameController.text.trim(),
+      );
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Inscription réussie'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authService.errorMessage ?? 'Erreur lors de l\'inscription'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _resetPassword() async {
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez entrer votre email'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+    
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final success = await authService.resetPassword(_emailController.text.trim());
+    
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email de réinitialisation envoyé'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authService.errorMessage ?? 'Erreur lors de l\'envoi'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+  
+  void _toggleEmailMode() {
+    setState(() {
+      _isEmailMode = !_isEmailMode;
+      _isSignUp = false;
+      _isOtpSent = false;
+      _emailController.clear();
+      _passwordController.clear();
+      _displayNameController.clear();
+    });
+  }
+  
+  void _toggleSignUp() {
+    setState(() {
+      _isSignUp = !_isSignUp;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,9 +262,58 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 50),
+                  
+                  // Toggle Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isEmailMode ? null : () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isEmailMode ? Colors.white.withOpacity(0.2) : Colors.white,
+                            foregroundColor: _isEmailMode ? Colors.white70 : AppColors.primaryEnd,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Téléphone',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isEmailMode ? () {} : _toggleEmailMode,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isEmailMode ? Colors.white : Colors.white.withOpacity(0.2),
+                            foregroundColor: _isEmailMode ? AppColors.primaryEnd : Colors.white70,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Email',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 30),
 
                   // Phone Number Input
-                  if (!_isOtpSent) ...[
+                  if (!_isEmailMode && !_isOtpSent) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
@@ -375,9 +535,202 @@ class _AuthScreenState extends State<AuthScreen> {
                         'Changer de numéro',
                         style: TextStyle(color: Colors.white70),
                       ),
-                    ),
-                  ],
-                ],
+                                         ),
+                   ],
+                   
+                   // Email Authentication
+                   if (_isEmailMode) ...[
+                     // Display Name Input (for sign up)
+                     if (_isSignUp) ...[
+                       Container(
+                         padding: const EdgeInsets.symmetric(horizontal: 16),
+                         decoration: BoxDecoration(
+                           color: Colors.white,
+                           borderRadius: BorderRadius.circular(12),
+                           boxShadow: [
+                             BoxShadow(
+                               color: Colors.black.withOpacity(0.1),
+                               blurRadius: 10,
+                               offset: const Offset(0, 5),
+                             ),
+                           ],
+                         ),
+                         child: TextFormField(
+                           controller: _displayNameController,
+                           decoration: const InputDecoration(
+                             hintText: 'Nom complet',
+                             border: InputBorder.none,
+                             hintStyle: TextStyle(color: AppColors.textLight),
+                             icon: Icon(Icons.person, color: AppColors.textLight),
+                           ),
+                           validator: (value) {
+                             if (_isSignUp && (value == null || value.isEmpty)) {
+                               return 'Veuillez entrer votre nom';
+                             }
+                             return null;
+                           },
+                         ),
+                       ),
+                       const SizedBox(height: 16),
+                     ],
+                     
+                     // Email Input
+                     Container(
+                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                       decoration: BoxDecoration(
+                         color: Colors.white,
+                         borderRadius: BorderRadius.circular(12),
+                         boxShadow: [
+                           BoxShadow(
+                             color: Colors.black.withOpacity(0.1),
+                             blurRadius: 10,
+                             offset: const Offset(0, 5),
+                           ),
+                         ],
+                       ),
+                       child: TextFormField(
+                         controller: _emailController,
+                         keyboardType: TextInputType.emailAddress,
+                         decoration: const InputDecoration(
+                           hintText: 'Adresse email',
+                           border: InputBorder.none,
+                           hintStyle: TextStyle(color: AppColors.textLight),
+                           icon: Icon(Icons.email, color: AppColors.textLight),
+                         ),
+                         validator: (value) {
+                           if (value == null || value.isEmpty) {
+                             return 'Veuillez entrer votre email';
+                           }
+                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                             return 'Email invalide';
+                           }
+                           return null;
+                         },
+                       ),
+                     ),
+                     const SizedBox(height: 16),
+                     
+                     // Password Input
+                     Container(
+                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                       decoration: BoxDecoration(
+                         color: Colors.white,
+                         borderRadius: BorderRadius.circular(12),
+                         boxShadow: [
+                           BoxShadow(
+                             color: Colors.black.withOpacity(0.1),
+                             blurRadius: 10,
+                             offset: const Offset(0, 5),
+                           ),
+                         ],
+                       ),
+                       child: TextFormField(
+                         controller: _passwordController,
+                         obscureText: !_isPasswordVisible,
+                         decoration: InputDecoration(
+                           hintText: 'Mot de passe',
+                           border: InputBorder.none,
+                           hintStyle: const TextStyle(color: AppColors.textLight),
+                           icon: const Icon(Icons.lock, color: AppColors.textLight),
+                           suffixIcon: IconButton(
+                             icon: Icon(
+                               _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                               color: AppColors.textLight,
+                             ),
+                             onPressed: () {
+                               setState(() {
+                                 _isPasswordVisible = !_isPasswordVisible;
+                               });
+                             },
+                           ),
+                         ),
+                         validator: (value) {
+                           if (value == null || value.isEmpty) {
+                             return 'Veuillez entrer votre mot de passe';
+                           }
+                           if (_isSignUp && value.length < 6) {
+                             return 'Le mot de passe doit contenir au moins 6 caractères';
+                           }
+                           return null;
+                         },
+                       ),
+                     ),
+                     const SizedBox(height: 24),
+                     
+                     // Action Buttons
+                     Row(
+                       children: [
+                         Expanded(
+                           child: SizedBox(
+                             height: 50,
+                             child: Consumer<AuthService>(
+                               builder: (context, authService, child) {
+                                 return ElevatedButton(
+                                   onPressed: authService.isLoading ? null : (_isSignUp ? _signUpWithEmail : _signInWithEmail),
+                                   style: ElevatedButton.styleFrom(
+                                     backgroundColor: Colors.white,
+                                     foregroundColor: AppColors.primaryEnd,
+                                     shape: RoundedRectangleBorder(
+                                       borderRadius: BorderRadius.circular(12),
+                                     ),
+                                     elevation: 0,
+                                   ),
+                                   child: authService.isLoading
+                                       ? const SizedBox(
+                                           height: 20,
+                                           width: 20,
+                                           child: CircularProgressIndicator(strokeWidth: 2),
+                                         )
+                                       : Text(
+                                           _isSignUp ? 'S\'inscrire' : 'Se connecter',
+                                           style: const TextStyle(
+                                             fontSize: 16,
+                                             fontWeight: FontWeight.w600,
+                                           ),
+                                         ),
+                                 );
+                               },
+                             ),
+                           ),
+                         ),
+                         const SizedBox(width: 12),
+                         SizedBox(
+                           height: 50,
+                           child: OutlinedButton(
+                             onPressed: _toggleSignUp,
+                             style: OutlinedButton.styleFrom(
+                               backgroundColor: Colors.transparent,
+                               foregroundColor: Colors.white,
+                               side: const BorderSide(color: Colors.white, width: 1),
+                               shape: RoundedRectangleBorder(
+                                 borderRadius: BorderRadius.circular(12),
+                               ),
+                             ),
+                             child: Text(
+                               _isSignUp ? 'Déjà inscrit ?' : 'Nouveau compte ?',
+                               style: const TextStyle(
+                                 fontSize: 14,
+                                 fontWeight: FontWeight.w600,
+                               ),
+                             ),
+                           ),
+                         ),
+                       ],
+                     ),
+                     
+                     // Forgot Password
+                     if (!_isSignUp) ...[
+                       const SizedBox(height: 16),
+                       TextButton(
+                         onPressed: _resetPassword,
+                         child: const Text(
+                           'Mot de passe oublié ?',
+                           style: TextStyle(color: Colors.white70),
+                         ),
+                       ),
+                     ],
+                   ],
+                 ],
               ),
             ),
           ),

@@ -186,6 +186,108 @@ class AuthService extends ChangeNotifier {
     }
   }
   
+  Future<bool> signUpWithEmail(String email, String password, String displayName) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+      
+      // Créer l'utilisateur avec email et mot de passe
+      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (userCredential.user != null) {
+        // Mettre à jour le nom d'affichage
+        await userCredential.user!.updateDisplayName(displayName);
+        
+        // Créer le document utilisateur
+        await _createUserDocument(userCredential.user!);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      _errorMessage = _getAuthErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  Future<bool> signInWithEmail(String email, String password) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+      
+      // Se connecter avec email et mot de passe
+      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (userCredential.user != null) {
+        // Mettre à jour le document utilisateur
+        await _createUserDocument(userCredential.user!);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      _errorMessage = _getAuthErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  Future<bool> resetPassword(String email) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+      
+      await _auth.sendPasswordResetEmail(email: email);
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = _getAuthErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  String _getAuthErrorMessage(dynamic error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'user-not-found':
+          return 'Aucun utilisateur trouvé avec cet email';
+        case 'wrong-password':
+          return 'Mot de passe incorrect';
+        case 'email-already-in-use':
+          return 'Cet email est déjà utilisé';
+        case 'weak-password':
+          return 'Le mot de passe est trop faible';
+        case 'invalid-email':
+          return 'Email invalide';
+        case 'too-many-requests':
+          return 'Trop de tentatives. Réessayez plus tard';
+        default:
+          return error.message ?? 'Une erreur est survenue';
+      }
+    }
+    return error.toString();
+  }
+  
   Future<void> signOut() async {
     try {
       await _auth.signOut();

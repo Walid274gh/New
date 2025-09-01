@@ -54,8 +54,10 @@ Développement de deux applications mobiles interconnectées pour faciliter la m
 
 #### ✅ Système d'Authentification
 - **Application Utilisateur** : 
-  - Authentification par téléphone + OTP
-  - **Connexion Google** avec gestion des profils
+  - **Authentification par téléphone + OTP** : Méthode traditionnelle
+  - **Connexion Google** : Authentification rapide avec profil complet
+  - **Authentification Email/Mot de passe** : Inscription et connexion classique
+  - **Récupération de mot de passe** : Envoi d'email de réinitialisation
   - Gestion des états de chargement et d'erreur
   - Création automatique des documents utilisateur
 - **Application Travailleur** : Authentification avancée avec étapes de vérification
@@ -83,6 +85,9 @@ firebase_messaging: ^14.7.10
 
 # Google Sign In
 google_sign_in: ^6.1.6
+
+# Email/Password Auth
+crypto: ^3.0.3
 
 # UI & Navigation
 provider: ^6.1.1
