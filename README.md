@@ -53,7 +53,11 @@ Développement de deux applications mobiles interconnectées pour faciliter la m
 - Structure de base de données Firestore
 
 #### ✅ Système d'Authentification
-- **Application Utilisateur** : Authentification simple par téléphone + OTP
+- **Application Utilisateur** : 
+  - Authentification par téléphone + OTP
+  - **Connexion Google** avec gestion des profils
+  - Gestion des états de chargement et d'erreur
+  - Création automatique des documents utilisateur
 - **Application Travailleur** : Authentification avancée avec étapes de vérification
 - Gestion des états de chargement et d'erreur
 - Création automatique des documents utilisateur/travailleur
@@ -76,6 +80,9 @@ firebase_auth: ^4.15.3
 cloud_firestore: ^4.13.6
 firebase_storage: ^11.5.6
 firebase_messaging: ^14.7.10
+
+# Google Sign In
+google_sign_in: ^6.1.6
 
 # UI & Navigation
 provider: ^6.1.1
@@ -133,6 +140,13 @@ geolocator: ^10.1.0
    - `com.khidmeti.worker`
 3. Télécharger et placer les fichiers `google-services.json`
 4. Configurer Firestore et Authentication
+
+#### Configuration Google Sign-In
+1. Activer Google Sign-In dans Firebase Console
+2. Configurer l'API Google Sign-In dans Google Cloud Console
+3. Mettre à jour `android/app/src/main/res/values/strings.xml`
+4. Ajouter les SHA-1 fingerprints dans Firebase
+5. Voir le guide détaillé : `Khidmeti-user/GOOGLE_SIGNIN_SETUP.md`
 
 #### Lancement
 ```bash

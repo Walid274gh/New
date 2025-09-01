@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   
   User? _user;
   bool _isLoading = false;
@@ -95,27 +97,99 @@ class AuthService extends ChangeNotifier {
       DocumentSnapshot userDoc = await userRef.get();
       
       if (!userDoc.exists) {
-        await userRef.set({
+        // Créer un nouveau document utilisateur
+        Map<String, dynamic> userData = {
           'uid': user.uid,
-          'phoneNumber': user.phoneNumber,
           'createdAt': FieldValue.serverTimestamp(),
           'lastSeen': FieldValue.serverTimestamp(),
           'isActive': true,
-        });
+          'authProvider': user.providerData.isNotEmpty ? user.providerData.first.providerId : 'unknown',
+        };
+        
+        // Ajouter les informations spécifiques au provider
+        if (user.providerData.isNotEmpty) {
+          final providerData = user.providerData.first;
+          if (providerData.providerId == 'google.com') {
+            userData['email'] = user.email;
+            userData['displayName'] = user.displayName;
+            userData['photoURL'] = user.photoURL;
+          } else if (providerData.providerId == 'phone') {
+            userData['phoneNumber'] = user.phoneNumber;
+          }
+        }
+        
+        await userRef.set(userData);
       } else {
-        await userRef.update({
+        // Mettre à jour le document existant
+        Map<String, dynamic> updateData = {
           'lastSeen': FieldValue.serverTimestamp(),
-          'isActive': true,
-        });
+        };
+        
+        // Mettre à jour les informations si elles ont changé
+        if (user.providerData.isNotEmpty) {
+          final providerData = user.providerData.first;
+          if (providerData.providerId == 'google.com') {
+            updateData['email'] = user.email;
+            updateData['displayName'] = user.displayName;
+            updateData['photoURL'] = user.photoURL;
+          }
+        }
+        
+        await userRef.update(updateData);
       }
     } catch (e) {
       print('Error creating user document: $e');
     }
   }
   
+  Future<bool> signInWithGoogle() async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+      
+      // Déclencher le flux de connexion Google
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        _isLoading = false;
+        notifyListeners();
+        return false; // L'utilisateur a annulé la connexion
+      }
+      
+      // Obtenir les détails d'authentification de la requête
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // Créer une nouvelle credential pour Firebase
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      
+      // Se connecter à Firebase avec la credential
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      
+      if (userCredential.user != null) {
+        // Créer ou mettre à jour le document utilisateur
+        await _createUserDocument(userCredential.user!);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+  
   Future<void> signOut() async {
     try {
       await _auth.signOut();
+      await _googleSignIn.signOut(); // Déconnexion Google également
       _user = null;
       notifyListeners();
     } catch (e) {

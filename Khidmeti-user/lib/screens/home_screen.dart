@@ -28,40 +28,77 @@ class HomeScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Bonjour !',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Que recherchez-vous ?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
+                      Consumer<AuthService>(
+                        builder: (context, authService, child) {
+                          final user = authService.user;
+                          String greeting = 'Bonjour !';
+                          String subtitle = 'Que recherchez-vous ?';
+                          
+                          if (user?.displayName != null) {
+                            greeting = 'Bonjour ${user!.displayName!.split(' ').first} !';
+                          }
+                          
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                greeting,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                subtitle,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       Consumer<AuthService>(
                         builder: (context, authService, child) {
-                          return CircleAvatar(
-                            radius: 25,
-                            backgroundColor: Colors.white,
-                            child: Text(
-                              authService.user?.phoneNumber?.substring(8, 10) ?? 'U',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryEnd,
+                          final user = authService.user;
+                          if (user?.photoURL != null) {
+                            // Utilisateur Google avec photo
+                            return CircleAvatar(
+                              radius: 25,
+                              backgroundImage: NetworkImage(user!.photoURL!),
+                              backgroundColor: Colors.white,
+                            );
+                          } else if (user?.displayName != null) {
+                            // Utilisateur Google sans photo
+                            return CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.white,
+                              child: Text(
+                                user!.displayName!.substring(0, 1).toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryEnd,
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          } else {
+                            // Utilisateur téléphone
+                            return CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.white,
+                              child: Text(
+                                user?.phoneNumber?.substring(8, 10) ?? 'U',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryEnd,
+                                ),
+                              ),
+                            );
+                          }
                         },
                       ),
                     ],
